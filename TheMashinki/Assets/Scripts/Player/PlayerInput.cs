@@ -5,20 +5,29 @@ using UnityEngine;
 public class PlayerInput : MonoBehaviour
 {
     [System.Serializable]
-    public class AxleInfo
+    public class WheelAxle
     {
         public WheelCollider leftWheel;
         public WheelCollider rightWheel;
         public Transform leftWheelModel;
         public Transform rightWheelModel;
-        public bool motor; // is this wheel attached to motor?
-        public bool steering; // does this wheel apply steer angle?
+        public bool isMotor; // is this wheel attached to motor?
+        public bool isSteering; // does this wheel apply steer angle?
 
-        public void update()
+        public void Update(float steering, float motor)
         {
-            Vector3 pos;
-            Quaternion rot;
-            leftWheel.GetWorldPose(out pos, out rot);
+            if (isSteering)
+            {
+                leftWheel.steerAngle = steering;
+                rightWheel.steerAngle = steering;
+            }
+            if (isMotor)
+            {
+                leftWheel.motorTorque = motor;
+                rightWheel.motorTorque = motor;
+            }
+
+            leftWheel.GetWorldPose(out Vector3 pos, out Quaternion rot);
             leftWheelModel.position = pos;
             leftWheelModel.rotation = rot;
 
@@ -27,60 +36,59 @@ public class PlayerInput : MonoBehaviour
             rightWheelModel.rotation = rot;
         }
 
-    }
-    public List<AxleInfo> axleInfos; // the information about each individual axle
-    [SerializeField] private Rigidbody _rigidbody;
-    [SerializeField] private Transform _directionArrow;
-    [SerializeField] private float _acceleration;
-
-    public float maxMotorTorque; // maximum torque the motor can apply to wheel
-    public float maxSteeringAngle; // maximum steer angle the wheel can have
-
-    public float motor;
-
-
-    private void Start()
-    {
-        
-    }
-
-    public void FixedUpdate()
-    {
-         motor = maxMotorTorque * Input.GetAxis("Vertical");
-        float steering = maxSteeringAngle * Input.GetAxis("Horizontal");
-
-        foreach (AxleInfo axleInfo in axleInfos)
+        public void Break(float brakeTorque)
         {
-            if (axleInfo.steering)
-            {
-                axleInfo.leftWheel.steerAngle = steering;
-                axleInfo.rightWheel.steerAngle = steering;
-            }
-            if (axleInfo.motor)
-            {
-                axleInfo.leftWheel.motorTorque = motor;
-                axleInfo.rightWheel.motorTorque = motor;
-            }
-
-            axleInfo.update();
+            print("break");
+            leftWheel.brakeTorque = brakeTorque;
+            rightWheel.brakeTorque = brakeTorque;
         }
+    }
+
+    [SerializeField] private WheelAxle[] _wheelAxle;
+    [SerializeField] private float _maxMotorTorque; // крутящий момент колеса
+    [SerializeField] private float _maxSteeringAngle;
+    private float _motor;
+    private float _steering;
+
+
+    private void Awake()
+    {
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
     }
 
     private void Update()
     {
-        //var input = Input.acceleration;//new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));//Input.acceleration;
-        //_rigidbody.AddForce(Vector3.forward * _acceleration * Time.deltaTime, ForceMode.Acceleration);
+        //_motor = _maxMotorTorque * Input.GetAxis("Vertical");
 
-        //_rigidbody.ro
-
-        /*var input = Quaternion.Euler(90, 0, 0) * Input.acceleration;
+        _motor = _maxMotorTorque * 0.5f;
+        _steering = Mathf.Clamp(Input.acceleration.x * _maxSteeringAngle, -_maxSteeringAngle, _maxSteeringAngle);
 
 
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            _wheelAxle[0].Break(800);
+            _wheelAxle[1].Break(800);
+        }
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            _wheelAxle[0].Break(0);
+            _wheelAxle[1].Break(0);
+        }
 
-        _rigidbody.AddForce(input);
-        Debug.DrawLine(transform.position, transform.position + input * 5);
-        _directionArrow.localScale = Vector3.one * input.magnitude;
+        for (int i = 0; i < _wheelAxle.Length; i++)
+        {
+            if (_wheelAxle[i].isSteering)
+            {
+                _wheelAxle[i].leftWheel.steerAngle = _steering;
+                _wheelAxle[i].rightWheel.steerAngle = _steering;
+            }
+            if (_wheelAxle[i].isMotor)
+            {
+                _wheelAxle[i].leftWheel.motorTorque = _motor;
+                _wheelAxle[i].rightWheel.motorTorque = _motor;
+            }
 
-        _directionArrow.LookAt(transform.position + input);*/
+            _wheelAxle[i].Update(_steering, _motor);
+        }
     }
 }
