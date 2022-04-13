@@ -44,10 +44,13 @@ public class PlayerInput : MonoBehaviour
         }
     }
 
+    [SerializeField] private Rigidbody _rigidbody;
+    [SerializeField] private Transform _centreOfMass;
     [SerializeField] private WheelAxle[] _wheelAxle;
     [SerializeField] private float _maxMotorTorque; // крутящий момент колеса
     [SerializeField] private float _maxSteeringAngle;
-    private float _motor;
+    [SerializeField]  private float _motor;
+    private float _speedMultiplier = 0.5f;
     private float _steering;
 
 
@@ -56,13 +59,30 @@ public class PlayerInput : MonoBehaviour
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
     }
 
+    private void Start()
+    {
+        //GetComponent<Rigidbody>().centerOfMass = _centreOfMass.position;
+        SpeedBoost(0.5f);
+    }
+
+    public void SpeedBoost(float multiplier)
+    {
+        _speedMultiplier = multiplier;
+        print(_speedMultiplier);
+    }
+
     private void Update()
     {
         //_motor = _maxMotorTorque * Input.GetAxis("Vertical");
 
-        _motor = _maxMotorTorque * 0.5f;
+
+        _motor = _maxMotorTorque * _speedMultiplier;
         _steering = Mathf.Clamp(Input.acceleration.x * _maxSteeringAngle, -_maxSteeringAngle, _maxSteeringAngle);
 
+
+#if UNITY_EDITOR
+        _steering = Input.GetAxis("Horizontal") * _maxSteeringAngle;
+#endif
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -77,18 +97,12 @@ public class PlayerInput : MonoBehaviour
 
         for (int i = 0; i < _wheelAxle.Length; i++)
         {
-            if (_wheelAxle[i].isSteering)
-            {
-                _wheelAxle[i].leftWheel.steerAngle = _steering;
-                _wheelAxle[i].rightWheel.steerAngle = _steering;
-            }
-            if (_wheelAxle[i].isMotor)
-            {
-                _wheelAxle[i].leftWheel.motorTorque = _motor;
-                _wheelAxle[i].rightWheel.motorTorque = _motor;
-            }
-
             _wheelAxle[i].Update(_steering, _motor);
         }
+    }
+
+    private void OnGUI()
+    {
+        GUI.Button(new Rect(new Vector2(Screen.width / 2, 50), new Vector2(200, 200)), "Velocity: " + _rigidbody.velocity.magnitude);
     }
 }
